@@ -11,8 +11,8 @@ Private Const wndName = "Tiny twinBASIC EXE"
 'the linker, which calls wWinMain etc. Normally this does more, like calls
 'global constructors, looks up the 2 arguments defaulted below, etc.
 'VB6 and twinBASIC do even more.
-Public Function RealMain() As Long
-    ExitProcess(wWinMain(GetModuleHandle(0), 0, GetCommandLineW(), SW_SHOW))
+Public Function RealMain(pPeb As PEB) As Long
+    ExitProcess(wWinMain(GetModuleHandle(0), 0, CType(Of RTL_USER_PROCESS_PARAMETERS)(pPeb.ProcessParameters).CommandLine.Buffer, SW_SHOW))
 End Function
 
 
