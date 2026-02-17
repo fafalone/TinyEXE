@@ -6,7 +6,7 @@ This is a simple Hello World app showing 2 things:
 <img width="377" height="292" alt="image" src="https://github.com/user-attachments/assets/742a94b3-9777-4ec7-8525-88bbee220807" />
 
 - A few people don't like that tB, unlike VB6, doesn't have a runtime DLL dependency; the Forms engine etc is built right into the exe. This makes the exe itself larger, even though a VB6 exe + msvbvm60.dll is roughly the same size as a tB exe. Why this 1.4MB difference matters with modern drive sizes and internet speeds, and most languages/toolchains starting even bigger, I don't know, but it's come up. This app demonstrates that it's not simply a twinBASIC inefficiency, and tB exes can be quite tiny: This app compiles to under 20kb for both 32 and 64bit despite having a GUI, dozens of APIs + constants, embedded version info, and 90 lines of code.
-- It accomplishes this using twinBASIC's ability to easily set your own entry point. Previously demonstrated and originally added for drivers, it's also applicable to regular GUI apps, just don't use Subsystem: Native. This forgoes any of the built in tools, making it even smaller than a non-GUI console app. But this means doing absolutely everything yourself. This presents an opportunity to learn how a Windows exe really works, starting with an actual entry point that's hidden and automatic even in a typical C app... the `wWinMain` or similar entry point isn't the *real* entry point, it's called by the real one, in C usually `wWinMainCRTStartup`. This is why if you try using `wWinMain` as the entry point in tB you'll get garbage for the arguments like command line... a real entry point has no arguments and retrieves those values itself, then calls `wWinMain`.\
+- It accomplishes this using twinBASIC's ability to easily set your own entry point. Previously demonstrated and originally added for drivers, it's also applicable to regular GUI apps, just don't use Subsystem: Native. This forgoes any of the built in tools, making it even smaller than a non-GUI console app. But this means doing absolutely everything yourself. This presents an opportunity to learn how a Windows exe really works, starting with an actual entry point that's hidden and automatic even in a typical C app... the `wWinMain` or similar entry point isn't the *real* entry point, it's called by the real one, in C usually `wWinMainCRTStartup`. This is why if you try using `wWinMain` as the entry point in tB you'll get garbage for the arguments like command line... a real entry point has only one argument, a pointer to the PEB, it prepares the other arguments itself then calls `wWinMain`.\
 twinBASIC allows overriding this real entry point... if you wanted all the default background setup, that's what the normal Startup Object setting is for. The app continues from there to register its own custom top level window class, create it and some child controls, then run its own message pump: the core of a Win32 GUI app that listens for input and other messages in a loop that runs until the window is destroyed, triggering the exit process, which must be handled carefully to avoid the process lingering on in the background despite being finished. This is very similar to subclassing.
 
 This is the full app, requiring a Windows Development Library reference, (though you'll want the actual .twinproj as there's a lot of Project Settings changes to make this work):
@@ -25,8 +25,8 @@ Private Const wndName = "Tiny twinBASIC EXE"
 'the linker, which calls wWinMain etc. Normally this does more, like calls
 'global constructors, looks up the 2 arguments defaulted below, etc.
 'VB6 and twinBASIC do even more.
-Public Function RealMain() As Long
-    ExitProcess(wWinMain(GetModuleHandle(0), 0, GetCommandLineW(), SW_SHOW))
+Public Function RealMain(pPeb As PEB) As Long
+    ExitProcess(wWinMain(GetModuleHandle(0), 0, CType(Of RTL_USER_PROCESS_PARAMETERS)(pPeb.ProcessParameters).CommandLine.Buffer, SW_SHOW))
 End Function
 
 
